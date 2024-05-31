@@ -3,6 +3,7 @@ package control;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -60,7 +61,8 @@ public class Login extends HttpServlet {
 			while (rs.next()) {
 				if (email.compareTo(rs.getString(1)) == 0) {
 					String psw = checkPsw(password);
-					if (psw.compareTo(rs.getString(2)) == 0) {
+					String dbPswd = rs.getString(2);
+					if (psw.compareTo(dbPswd) == 0) {
 						control = true;
 						UserBean registeredUser = new UserBean();
 						registeredUser.setEmail(rs.getString(1));
@@ -98,19 +100,24 @@ public class Login extends HttpServlet {
 		response.sendRedirect(request.getContextPath() + redirectedPage);
 	}
 		
-	private String checkPsw(String psw) {
-		MessageDigest md = null;
-		try {
-			md = MessageDigest.getInstance("MD5");
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		byte[] messageDigest = md.digest(psw.getBytes());
-		BigInteger number = new BigInteger(1, messageDigest);
-		String hashtext = number.toString(16);
-		
-		return hashtext;
-	}
+	public static String checkPsw(String psw) {
+        MessageDigest md = null;
+        try {
+            md = MessageDigest.getInstance("SHA-256");
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+            return null;
+        }
+        byte[] messageDigest = md.digest(psw.getBytes());
+        BigInteger number = new BigInteger(1, messageDigest);
+        StringBuilder hashtext = new StringBuilder(number.toString(16));
+
+        // Pad with leading zeros
+        while (hashtext.length() < 64) {
+            hashtext.insert(0, "0");
+        }
+
+        return hashtext.toString();
+    }
 
 }
